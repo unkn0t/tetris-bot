@@ -4,6 +4,8 @@ use super::commands::Command;
 use super::board::*;
 use super::simulator::Simulator;
 
+const SIMULATION_DEPTH: usize = 4;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Rotation {
     None,
@@ -14,7 +16,7 @@ pub enum Rotation {
 
 pub struct Solver {
     simulator: Simulator,
-    next_figures: [FigureType; 3],
+    next_figures: [FigureType; SIMULATION_DEPTH],
     center: Point,
 }   
 
@@ -43,7 +45,7 @@ impl Solver {
     pub fn new() -> Self {
         Self { 
             simulator: Simulator::new(&Glass::empty()), 
-            next_figures: [FigureType::I; 3],
+            next_figures: [FigureType::I; SIMULATION_DEPTH],
             center: Point::new(0, 0),
         }
     }
@@ -90,7 +92,7 @@ impl Solver {
             for mov in self.simulator.valid_moves(&figure) {
                 self.simulator.toggle_figure(&figure, mov);
                 
-                let evaluation = if depth == 2 {
+                let evaluation = if depth == SIMULATION_DEPTH - 1 {
                     self.simulator.evaluate()
                 } else {
                     self.search(depth + 1)
@@ -119,7 +121,7 @@ impl engine::Solver<Command, Board> for Solver {
         self.simulator = Simulator::new(board.glass());
         self.next_figures[0] = board.current_figure_type();
         self.center = board.current_figure_point();
-        self.next_figures[1..].clone_from_slice(&board.future_figures_types()[..2]);
+        self.next_figures[1..].clone_from_slice(&board.future_figures_types()[..SIMULATION_DEPTH - 1]);
        
         let (offset, rotation) = self.find_best_move();
         
