@@ -6,7 +6,7 @@ use super::simulator::Simulator;
 
 use rayon::prelude::*;
 
-const SIMULATION_DEPTH: usize = 3;
+const SIMULATION_DEPTH: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rotation {
