@@ -73,16 +73,16 @@ impl Simulator {
         let mut under_mask: u32 = 0;
         let mut ln_mask: u32 = 0;
         let mut rn_mask: u32 = 0;
-        let mut min_y = 0;
+        let mut max_y: i64 = BOARD_HEIGHT as i64 - 1;
         let mut holes_count = 0; 
 
-        while min_y < BOARD_HEIGHT as i64 && self.glass.get_row(min_y as usize) == Self::FULL_ROW {
-            min_y += 1;
+        while max_y >= 0 as i64 && self.glass.get_row(max_y as usize) == 0 {
+            max_y -= 1;
         }
 
-        for y in min_y..BOARD_HEIGHT as i64 {
-            let line = self.glass.get_row(y as usize);
-            let filled = line & Self::FULL_ROW;
+        for y in (0..=max_y).rev() {
+            let filled = self.glass.get_row(y as usize);
+            let line = !filled & Self::FULL_ROW;
 
             under_mask |= filled;
             ln_mask |= filled << 1;
@@ -99,7 +99,7 @@ impl Simulator {
     fn score_fun(p: i64, y: i64) -> i64 {
         let mut result = 1;
         for _ in 0..p {
-            result *= BOARD_HEIGHT_I32 as i64 - y;
+            result *= y + 1;
         }
         result
     }
