@@ -4,7 +4,7 @@ use super::commands::Command;
 use super::board::*;
 use super::simulator::Simulator;
 
-const SIMULATION_DEPTH: usize = 4;
+const SIMULATION_DEPTH: usize = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Rotation {
