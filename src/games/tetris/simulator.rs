@@ -81,8 +81,8 @@ impl Simulator {
         }
 
         for y in min_y..BOARD_HEIGHT as i64 {
-            let filled = self.glass.get_row(y as usize);
-            let line = !filled & Self::FULL_ROW;
+            let line = self.glass.get_row(y as usize);
+            let filled = line & Self::FULL_ROW;
 
             under_mask |= filled;
             ln_mask |= filled << 1;
