@@ -3,8 +3,8 @@ use super::figure::Figure;
 use std::time::Duration;
 
 pub const SBOARD_HEIGHT: usize = 18;
-pub const SBOARD_WIDTH: usize = 17;
-pub const SBOARD_WIDTH_I32: i32 = 17;
+pub const SBOARD_WIDTH: usize = 18;
+pub const SBOARD_WIDTH_I32: i32 = 18;
 pub const SBOARD_HEIGHT_I32: i32 = 18;
 
 pub struct Simulator {
@@ -66,10 +66,10 @@ impl Simulator {
     }
     
     pub fn evaluate(&self) -> f32 {
-        const A: f32 = -0.30;
-        const B: f32 = 0.55;
-        const C: f32 = -0.75;
-        const D: f32 = -0.12;
+        const A: f32 = -0.51;
+        const B: f32 = 0.70;
+        const C: f32 = -0.35;
+        const D: f32 = -0.16;
 
         let cols_heights = self.cols_heights();
         let holes_count = self.count_holes() as f32;
@@ -109,18 +109,6 @@ impl Simulator {
         for y in 0..SBOARD_HEIGHT {
             let row = self.glass.get_row(y);
             result += (row == Self::FULL_ROW) as u32;
-        }
-
-        result
-    }
-
-    pub fn semicompleted_lines(&self) -> u32 {
-        let mut result = 0;
-        
-        for y in 0..SBOARD_HEIGHT {
-            let row = self.glass.get_row(y);
-            result += (row.count_zeros() - row.leading_zeros() - 1 == 1) as u32;
-            result += (row.count_zeros() - row.leading_zeros() - 1 == 0 && (row & 1) == 1) as u32;
         }
 
         result

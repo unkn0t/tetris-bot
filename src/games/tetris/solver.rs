@@ -121,22 +121,15 @@ impl engine::Solver<Command, Board> for Solver {
         self.center = board.current_figure_point();
         self.next_figures[1..].clone_from_slice(&board.future_figures_types()[..2]);
        
-        let factor = self.simulator.completed_lines() + self.simulator.semicompleted_lines() / 2;
-        if factor >= 4 && board.current_figure_type() == FigureType::I {
-            for _ in 0..BOARD_WIDTH {
-                commands.add(Command::Right);
-            }
-        } else {
-            let (offset, rotation) = self.find_best_move();
-            
-            if rotation != Rotation::None {
-                commands.add(rotation.into());
-            }
-            
-            let command = if offset < 0 { Command::Left } else { Command::Right }; 
-            for _ in 0..offset.abs() {
-                commands.add(command);
-            }
+        let (offset, rotation) = self.find_best_move();
+        
+        if rotation != Rotation::None {
+            commands.add(rotation.into());
+        }
+        
+        let command = if offset < 0 { Command::Left } else { Command::Right }; 
+        for _ in 0..offset.abs() {
+            commands.add(command);
         }
 
         for _ in 0..BOARD_HEIGHT {
