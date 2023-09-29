@@ -2,38 +2,41 @@ use super::board::*;
 use super::figure::Figure;
 use std::time::Duration;
 
-pub const SBOARD_HEIGHT: usize = 18;
-pub const SBOARD_WIDTH: usize = 18;
-pub const SBOARD_WIDTH_I32: i32 = 18;
-pub const SBOARD_HEIGHT_I32: i32 = 18;
-
 #[derive(Clone)]
 pub struct Simulator {
     glass: Glass,
+    set_ones: Vec<u8>,
 }
 
 impl Simulator {
-    const FULL_ROW: u32 = ((1 << SBOARD_WIDTH) - 1) << (BOARD_WIDTH - SBOARD_WIDTH);
+    const FULL_ROW: u32 = (1 << BOARD_WIDTH) - 1;
 
     pub fn new(glass: &Glass) -> Self {
+        let mut set_ones = vec![0; Self::FULL_ROW as usize + 1];
+
+        for x in 0..=Self::FULL_ROW {
+            set_ones[x as usize] = x.count_ones() as u8;
+        }
+
         Self { 
             glass: glass.clone(),
+            set_ones,
         }
     }
     
     pub fn valid_moves(&mut self, figure: &Figure) -> Vec<Point> {
-        let mut moves = Vec::with_capacity(SBOARD_WIDTH);
+        let mut moves = Vec::with_capacity(BOARD_WIDTH);
         
         let heights = self.cols_heights();
         let bottoms = figure.bottoms();
 
-        for x in figure.left()..SBOARD_WIDTH_I32 - figure.right() {
+        for x in figure.left()..BOARD_WIDTH_I32 - figure.right() {
             let mut y = 0;
             for t in -figure.left()..=figure.right() {
                 y = y.max(heights[(x + t) as usize] + bottoms[(t + 2) as usize]);
             }
             
-            if y >= 15 {
+            if y >= 16 {
                 continue;
             }
 
@@ -50,7 +53,7 @@ impl Simulator {
     pub fn toggle_figure(&mut self, figure: &Figure, center: Point) {
         let radius = 2;
         let bottom_row = 0.max(center.y - radius);
-        let top_row = SBOARD_HEIGHT_I32.min(center.y + radius + 1);
+        let top_row = BOARD_HEIGHT_I32.min(center.y + radius + 1);
 
         for y in bottom_row..top_row {
             let row = self.glass.get_row(y as usize);
@@ -67,29 +70,44 @@ impl Simulator {
     }
     
     pub fn evaluate(&self) -> i64 {
-        const A: i64 = -51;
-        const B: i64 = 70;
-        const C: i64 = -35;
-        const D: i64 = -16;
+        let mut under_mask: u32 = 0;
+        let mut ln_mask: u32 = 0;
+        let mut rn_mask: u32 = 0;
+        let mut min_y = 0;
+        let mut holes_count = 0; 
 
-        let cols_heights = self.cols_heights();
-        let holes_count = self.count_holes() as i64;
-        let aggregate_height = self.cols_heights().iter().fold(0, |acc, h| acc + h) as i64;
-        let completed_lines = self.completed_lines();
-
-        let mut bumpiness = 0;
-
-        for x in 1..cols_heights.len() {
-            bumpiness += (cols_heights[x] as i64 - cols_heights[x - 1] as i64).abs();
+        while min_y < BOARD_HEIGHT as i64 && self.glass.get_row(min_y as usize) == Self::FULL_ROW {
+            min_y += 1;
         }
 
-        A * aggregate_height + B * completed_lines as i64 + C * holes_count + D * bumpiness
+        for y in min_y..BOARD_HEIGHT as i64 {
+            let line = self.glass.get_row(y as usize);
+            let filled = !line & Self::FULL_ROW;
+
+            under_mask |= filled;
+            ln_mask |= filled << 1;
+            rn_mask |= filled >> 1;
+            
+            holes_count += Self::score_fun(3, y) * self.set_ones[(under_mask & line) as usize] as i64;
+            holes_count += Self::score_fun(2, y) * self.set_ones[(ln_mask & line) as usize] as i64;
+            holes_count += Self::score_fun(2, y) * self.set_ones[(rn_mask & line) as usize] as i64;
+        }
+
+        holes_count
+    }
+
+    fn score_fun(p: i64, y: i64) -> i64 {
+        let mut result = 1;
+        for _ in 0..p {
+            result *= BOARD_HEIGHT_I32 as i64 - y;
+        }
+        result
     }
 
     fn intersect_figure(&self, figure: &Figure, center: Point) -> bool {
         let radius = 2;
         let bottom_row = 0.max(center.y - radius);
-        let top_row = SBOARD_HEIGHT_I32.min(center.y + radius + 1);
+        let top_row = BOARD_HEIGHT_I32.min(center.y + radius + 1);
 
         for y in bottom_row..top_row {
             let row = self.glass.get_row(y as usize);
@@ -104,31 +122,31 @@ impl Simulator {
         false
     } 
     
-    pub fn completed_lines(&self) -> u32 {
-        let mut result = 0;
-
-        for y in 0..SBOARD_HEIGHT {
-            let row = self.glass.get_row(y);
-            result += (row == Self::FULL_ROW) as u32;
-        }
-
-        result
-    }
-
+    // pub fn completed_lines(&self) -> u32 {
+    //     let mut result = 0;
+    //
+    //     for y in 0..BOARD_HEIGHT {
+    //         let row = self.glass.get_row(y);
+    //         result += (row == Self::FULL_ROW) as u32;
+    //     }
+    //
+    //     result
+    // }
+    //
     fn cols_heights(&self) -> Vec<i32> {
-        let mut result = vec![0; SBOARD_WIDTH];
-        for x in 0..SBOARD_WIDTH {
+        let mut result = vec![0; BOARD_WIDTH];
+        for x in 0..BOARD_WIDTH {
             result[x] = (u32::BITS - self.glass.get_col(x).leading_zeros()) as i32;
         }
         result
     }
-
-    fn count_holes(&self) -> u32 {
-        let mut result = 0;
-        for x in 0..SBOARD_WIDTH {
-            let col = self.glass.get_col(x);
-            result += col.count_zeros() - col.leading_zeros();
-        }
-        result
-    }
+    //
+    // fn count_holes(&self) -> u32 {
+    //     let mut result = 0;
+    //     for x in 0..BOARD_WIDTH {
+    //         let col = self.glass.get_col(x);
+    //         result += col.count_zeros() - col.leading_zeros();
+    //     }
+    //     result
+    // }
 }
