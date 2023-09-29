@@ -114,7 +114,7 @@ impl engine::Solver<Command, Board> for Solver {
     }
 
     fn solve(&mut self, commands: &mut engine::Commands<Command>, board: &Board) {
-        // let timer = std::time::Instant::now();
+        let timer = std::time::Instant::now();
 
         self.simulator = Simulator::new(board.glass());
         self.next_figures[0] = board.current_figure_type();
@@ -143,7 +143,7 @@ impl engine::Solver<Command, Board> for Solver {
             commands.add(Command::Down);
         }
 
-        // println!("Elapsed time: {}ms", timer.elapsed().as_millis());
+        println!("Elapsed time: {}ms", timer.elapsed().as_millis());
     }
 }
 
