@@ -7,6 +7,7 @@ pub const SBOARD_WIDTH: usize = 18;
 pub const SBOARD_WIDTH_I32: i32 = 18;
 pub const SBOARD_HEIGHT_I32: i32 = 18;
 
+#[derive(Clone)]
 pub struct Simulator {
     glass: Glass,
 }
@@ -65,24 +66,24 @@ impl Simulator {
         std::thread::sleep(Duration::from_millis(ms));
     }
     
-    pub fn evaluate(&self) -> f32 {
-        const A: f32 = -0.51;
-        const B: f32 = 0.70;
-        const C: f32 = -0.35;
-        const D: f32 = -0.16;
+    pub fn evaluate(&self) -> i64 {
+        const A: i64 = -51;
+        const B: i64 = 70;
+        const C: i64 = -35;
+        const D: i64 = -16;
 
         let cols_heights = self.cols_heights();
-        let holes_count = self.count_holes() as f32;
-        let aggregate_height = self.cols_heights().iter().fold(0, |acc, h| acc + h) as f32;
+        let holes_count = self.count_holes() as i64;
+        let aggregate_height = self.cols_heights().iter().fold(0, |acc, h| acc + h) as i64;
         let completed_lines = self.completed_lines();
 
-        let mut bumpiness = 0.0;
+        let mut bumpiness = 0;
 
         for x in 1..cols_heights.len() {
-            bumpiness += (cols_heights[x] as f32 - cols_heights[x - 1] as f32).abs();
+            bumpiness += (cols_heights[x] as i64 - cols_heights[x - 1] as i64).abs();
         }
 
-        A * aggregate_height + B * completed_lines as f32 + C * holes_count + D * bumpiness
+        A * aggregate_height + B * completed_lines as i64 + C * holes_count + D * bumpiness
     }
 
     fn intersect_figure(&self, figure: &Figure, center: Point) -> bool {

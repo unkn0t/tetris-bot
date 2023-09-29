@@ -4,9 +4,11 @@ use super::commands::Command;
 use super::board::*;
 use super::simulator::Simulator;
 
-const SIMULATION_DEPTH: usize = 3;
+use rayon::prelude::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+const SIMULATION_DEPTH: usize = 4;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rotation {
     None,
     Left,
@@ -15,7 +17,6 @@ pub enum Rotation {
 }
 
 pub struct Solver {
-    simulator: Simulator,
     next_figures: [FigureType; SIMULATION_DEPTH],
     center: Point,
 }   
@@ -44,43 +45,44 @@ impl Solver {
    
     pub fn new() -> Self {
         Self { 
-            simulator: Simulator::new(&Glass::empty()), 
             next_figures: [FigureType::I; SIMULATION_DEPTH],
             center: Point::new(0, 0),
         }
     }
 
-    fn find_best_move(&mut self) -> (i32, Rotation) {
+    fn find_best_move(&self, glass: &Glass) -> (i32, Rotation) {
         let mut best_move = (0, Rotation::None);
-        let mut best_evaluation = f32::MIN;
+        let mut best_evaluation = i64::MIN;
 
         let figure_type = self.next_figures[0];
         let figure = Figure::from(figure_type);
-        self.simulator.toggle_figure(&figure, self.center);
-
+        let mut simulator = Simulator::new(glass);
+        simulator.toggle_figure(&figure, self.center);
+        
         for rotation in Self::ROTATIONS[figure_type as usize] {
             let mut figure = figure.clone();
             figure.rotate(*rotation);
 
-            for mov in self.simulator.valid_moves(&figure) {
-                self.simulator.toggle_figure(&figure, mov);
-                
-                let evaluation = self.search(1);
-
+            let mut sim_clone = simulator.clone();
+            let valid_moves = sim_clone.valid_moves(&figure);
+            if let Some((evaluation, mov)) = valid_moves.into_par_iter().map_with(sim_clone, |simulator, mov| {
+                simulator.toggle_figure(&figure, mov);
+                let evaluation = self.search(simulator, 1);                    
+                simulator.toggle_figure(&figure, mov);
+                (evaluation, (mov.x - self.center.x, *rotation))
+            }).max() {
                 if evaluation > best_evaluation {
                     best_evaluation = evaluation;
-                    best_move = (mov.x - self.center.x, *rotation);
+                    best_move = mov;
                 }
-                    
-                self.simulator.toggle_figure(&figure, mov);
             }
         }
 
         best_move
     }
 
-    fn search(&mut self, depth: usize) -> f32 {
-        let mut best_evaluation = f32::MIN;
+    fn search(&self, simulator: &mut Simulator, depth: usize) -> i64 {
+        let mut best_evaluation = i64::MIN;
 
         let figure_type = self.next_figures[depth];
         let figure = Figure::from(figure_type);
@@ -89,20 +91,20 @@ impl Solver {
             let mut figure = figure.clone();
             figure.rotate(*rotation);
 
-            for mov in self.simulator.valid_moves(&figure) {
-                self.simulator.toggle_figure(&figure, mov);
+            for mov in simulator.valid_moves(&figure) {
+                simulator.toggle_figure(&figure, mov);
                 
                 let evaluation = if depth == SIMULATION_DEPTH - 1 {
-                    self.simulator.evaluate()
+                    simulator.evaluate()
                 } else {
-                    self.search(depth + 1)
+                    self.search(simulator, depth + 1)
                 };
 
                 if evaluation > best_evaluation {
                     best_evaluation = evaluation;
                 }
                     
-                self.simulator.toggle_figure(&figure, mov);
+                simulator.toggle_figure(&figure, mov);
             }
         }
         
@@ -118,12 +120,12 @@ impl engine::Solver<Command, Board> for Solver {
     fn solve(&mut self, commands: &mut engine::Commands<Command>, board: &Board) {
         let timer = std::time::Instant::now();
 
-        self.simulator = Simulator::new(board.glass());
+        // self.simulator = Simulator::new(board.glass());
         self.next_figures[0] = board.current_figure_type();
         self.center = board.current_figure_point();
         self.next_figures[1..].clone_from_slice(&board.future_figures_types()[..SIMULATION_DEPTH - 1]);
        
-        let (offset, rotation) = self.find_best_move();
+        let (offset, rotation) = self.find_best_move(board.glass());
         
         if rotation != Rotation::None {
             commands.add(rotation.into());
