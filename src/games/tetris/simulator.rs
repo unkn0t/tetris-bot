@@ -93,7 +93,7 @@ impl Simulator {
             holes_count += Self::score_fun(2, y) * self.set_ones[(rn_mask & line) as usize] as i64;
         }
 
-        holes_count
+        -holes_count
     }
 
     fn score_fun(p: i64, y: i64) -> i64 {
