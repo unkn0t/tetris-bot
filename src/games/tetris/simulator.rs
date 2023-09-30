@@ -103,7 +103,7 @@ impl Simulator {
             ln_mask |= filled << 1;
             rn_mask |= filled >> 1;
            
-            let side_factor = y * y;
+            let side_factor = (y + 2) * (y + 2);
             let inside_factor = side_factor * side_factor;
             unsafe {
                 holes_count += inside_factor * SET_ONES[(under_mask & line) as usize] as i64;
