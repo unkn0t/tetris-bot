@@ -76,7 +76,7 @@ impl Simulator {
 
     pub fn unplace_figure(&mut self, figure: &Figure, center: Point) {
         self.toggle_figure(figure, center);
-        self.recalc_heights();
+        self.recalc_heights(figure, center);
     }
 
     pub fn visualize(&self, ms: u64) {
@@ -104,7 +104,7 @@ impl Simulator {
             rn_mask |= filled >> 1;
            
             let side_factor = (y + 2) * (y + 2);
-            let inside_factor = side_factor * side_factor;
+            let inside_factor = side_factor * (y + 2);
             unsafe {
                 holes_count += inside_factor * SET_ONES[(under_mask & line) as usize] as i64;
                 holes_count += side_factor * SET_ONES[(ln_mask & line) as usize] as i64;
@@ -133,8 +133,10 @@ impl Simulator {
         false
     } 
     
-    fn recalc_heights(&mut self) {
-        for x in 0..BOARD_WIDTH {
+    fn recalc_heights(&mut self, figure: &Figure, center: Point) {
+        let left = 0.max(center.x - figure.left()) as usize;
+        let right = BOARD_WIDTH_I32.min(center.x + figure.right() + 1) as usize;
+        for x in left..right {
             self.heights[x] = (u32::BITS - self.glass.get_col(x).leading_zeros()) as i32;
         }
     }
