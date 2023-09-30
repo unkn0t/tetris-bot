@@ -49,10 +49,15 @@ impl Figure {
         }
         bottoms
     }
-
-    // pub fn bottom(&self) -> i32 {
-    //     ((self.sides >> 8) & 255) as i32
-    // }
+    
+    pub fn tops(&self) -> [i32; 5] {
+        let mut tops = [0; 5];
+        for x in 2-self.left()..=2+self.right() {
+            tops[x as usize] += ((self.matrix[3] >> (4 - x)) & 1) as i32;
+            tops[x as usize] += ((self.matrix[4] >> (4 - x)) & 1) as i32;
+        }
+        tops
+    }
     
     pub fn right(&self) -> i32 {
         (self.sides & 255) as i32

@@ -6,7 +6,7 @@ use super::simulator::Simulator;
 
 use rayon::prelude::*;
 
-const SIMULATION_DEPTH: usize = 3;
+const SIMULATION_DEPTH: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rotation {
@@ -57,7 +57,7 @@ impl Solver {
         let figure_type = self.next_figures[0];
         let figure = Figure::from(figure_type);
         let mut simulator = Simulator::new(glass);
-        simulator.toggle_figure(&figure, self.center);
+        simulator.unplace_figure(&figure, self.center);
         
         for rotation in Self::ROTATIONS[figure_type as usize] {
             let mut figure = figure.clone();
@@ -66,9 +66,9 @@ impl Solver {
             let mut sim_clone = simulator.clone();
             let valid_moves = sim_clone.valid_moves(&figure);
             if let Some((evaluation, mov)) = valid_moves.into_par_iter().map_with(sim_clone, |simulator, mov| {
-                simulator.toggle_figure(&figure, mov);
+                simulator.place_figure(&figure, mov);
                 let evaluation = self.search(simulator, 1);                    
-                simulator.toggle_figure(&figure, mov);
+                simulator.unplace_figure(&figure, mov);
                 (evaluation, (mov.x - self.center.x, *rotation))
             }).max() {
                 if evaluation > best_evaluation {
@@ -92,7 +92,7 @@ impl Solver {
             figure.rotate(*rotation);
 
             for mov in simulator.valid_moves(&figure) {
-                simulator.toggle_figure(&figure, mov);
+                simulator.place_figure(&figure, mov);
                 
                 let evaluation = if depth == SIMULATION_DEPTH - 1 {
                     simulator.evaluate()
@@ -104,7 +104,7 @@ impl Solver {
                     best_evaluation = evaluation;
                 }
                     
-                simulator.toggle_figure(&figure, mov);
+                simulator.unplace_figure(&figure, mov);
             }
         }
         
@@ -120,7 +120,6 @@ impl engine::Solver<Command, Board> for Solver {
     fn solve(&mut self, commands: &mut engine::Commands<Command>, board: &Board) {
         let timer = std::time::Instant::now();
 
-        // self.simulator = Simulator::new(board.glass());
         self.next_figures[0] = board.current_figure_type();
         self.center = board.current_figure_point();
         self.next_figures[1..].clone_from_slice(&board.future_figures_types()[..SIMULATION_DEPTH - 1]);
